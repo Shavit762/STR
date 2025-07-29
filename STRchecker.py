@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import geopandas as gpd
@@ -45,10 +44,22 @@ address = st.text_input("Enter a Chicago address:", "")
 if address:
     geolocator = Nominatim(user_agent="shared_housing_checker_web")
     location = geolocator.geocode(address, timeout=10)
+    
     if not location:
         st.error(f"❌ Address '{address}' could not be geocoded.")
     else:
         point = Point(location.longitude, location.latitude)
+
+        # Create a map centered on the searched address
+        search_map = folium.Map(location=[location.latitude, location.longitude], zoom_start=16)
+
+        # Add a marker for the searched location
+        folium.Marker(
+            location=[location.latitude, location.longitude],
+            popup="Searched Address",
+            icon=folium.Icon(color="blue", icon="home")
+        ).add_to(search_map)
+
         in_rrz = any(row["geometry"].contains(point) for _, row in rrz_gdf.iterrows())
         in_pbl = any(addr.lower() in address.lower() for addr in pbl_addresses)
         in_small = any(addr.lower() in address.lower() for addr in small_building_addresses)
@@ -62,9 +73,6 @@ if address:
         else:
             st.success("✅ Address is eligible for shared housing registration.")
 
-# Load map
-st.subheader("🗺️ Map of Restricted Zones and Prohibited Buildings")
-with open("Chicago_Shared_Housing_Updated_Map.html", "r") as f:
-    map_html = f.read()
-
-st.components.v1.html(map_html, height=700, scrolling=True)
+        # Load map
+        st.subheader("🗺️ Map of Restricted Zones and Prohibited Buildings")
+        st_folium(search_map, height=600, width=700)
